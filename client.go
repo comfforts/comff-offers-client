@@ -32,7 +32,7 @@ var (
 	defaultKeepAliveTimeout = 10 * time.Second
 )
 
-const DeliveryClientContextKey = ContextKey("offers-client")
+const OffersClientContextKey = ContextKey("offers-client")
 const DefaultClientName = "comfforts-offers-client"
 
 type Client interface {
