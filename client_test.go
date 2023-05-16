@@ -61,7 +61,7 @@ func testDatabaseSetup(t *testing.T, ofc offclient.Client) {
 
 	osResp, err := ofc.GetOfferStatuses(ctx, &api.OfferStatusesRequest{})
 	require.NoError(t, err)
-	require.Equal(t, len(osResp.Statuses), 9)
+	require.Equal(t, len(osResp.Statuses), 10)
 
 	dsResp, err := ofc.GetOfferTypes(ctx, &api.OfferTypesRequest{})
 	require.NoError(t, err)
