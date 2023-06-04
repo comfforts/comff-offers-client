@@ -72,6 +72,7 @@ func testOfferCRUD(t *testing.T, ofc offclient.Client) {
 	t.Helper()
 
 	reqtr, shopId, courierId, deliveryId := "test-client-offer-crud@gmail.com", "test-client-offer-crud-shop", "test-client-offer-crud-courier", "CL1eCr341e0r620ff3r"
+	wkflId, runId := "wkflid", "wkflrunid"
 	or := createOfferTester(t, ofc, &api.CreateOfferRequest{
 		ActorId:       shopId,
 		ParticipantId: courierId,
@@ -79,6 +80,8 @@ func testOfferCRUD(t *testing.T, ofc offclient.Client) {
 		RequestedBy:   reqtr,
 		Min:           comffC.F12,
 		Max:           comffC.F15,
+		WorkflowId:    wkflId,
+		RunId:         runId,
 	})
 	or = getOfferTester(t, ofc, &api.GetOfferRequest{
 		Id: or.Offer.Id,
@@ -110,6 +113,8 @@ func createOfferTester(t *testing.T, client offclient.Client, cor *api.CreateOff
 	assert.Equal(t, resp.Offer.ActorId, cor.ActorId, "offer actor id should match input actor id")
 	assert.Equal(t, resp.Offer.ParticipantId, cor.ParticipantId, "offer participant id should match input participant id")
 	assert.Equal(t, resp.Offer.TransactionId, cor.TransactionId, "offer transaction id should match input transaction id")
+	assert.Equal(t, resp.Offer.WorkflowId, cor.WorkflowId, "offer workflow id should match input workflow id")
+	assert.Equal(t, resp.Offer.RunId, cor.RunId, "offer run id should match input run id")
 	assert.Equal(t, resp.Offer.Type, cor.Type, "offer type should match input type")
 	assert.Equal(t, resp.Offer.Status, api.OfferStatus_OPEN, "offer status should be OPEN")
 
