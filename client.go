@@ -42,6 +42,8 @@ type Client interface {
 	UpdateOffer(ctx context.Context, req *api.UpdateOfferRequest, opts ...grpc.CallOption) (*api.OfferResponse, error)
 	GetOffer(ctx context.Context, req *api.GetOfferRequest, opts ...grpc.CallOption) (*api.OfferResponse, error)
 	GetOffers(ctx context.Context, req *api.GetOffersRequest, opts ...grpc.CallOption) (*api.OffersResponse, error)
+	GetActorOffers(ctx context.Context, req *api.GetOffersRequest, opts ...grpc.CallOption) (*api.OffersResponse, error)
+	GetParticipantOffers(ctx context.Context, req *api.GetOffersRequest, opts ...grpc.CallOption) (*api.OffersResponse, error)
 	DeleteOffer(ctx context.Context, req *api.DeleteOfferRequest, opts ...grpc.CallOption) (*api.DeleteResponse, error)
 	Close() error
 }
@@ -181,6 +183,28 @@ func (ofc *offersClient) GetOffers(
 	defer cancel()
 
 	return ofc.client.GetOffers(ctx, req)
+}
+
+func (ofc *offersClient) GetActorOffers(
+	ctx context.Context,
+	req *api.GetOffersRequest,
+	opts ...grpc.CallOption,
+) (*api.OffersResponse, error) {
+	ctx, cancel := ofc.contextWithOptions(ctx, ofc.opts)
+	defer cancel()
+
+	return ofc.client.GetActorOffers(ctx, req)
+}
+
+func (ofc *offersClient) GetParticipantOffers(
+	ctx context.Context,
+	req *api.GetOffersRequest,
+	opts ...grpc.CallOption,
+) (*api.OffersResponse, error) {
+	ctx, cancel := ofc.contextWithOptions(ctx, ofc.opts)
+	defer cancel()
+
+	return ofc.client.GetParticipantOffers(ctx, req)
 }
 
 func (ofc *offersClient) DeleteOffer(
