@@ -6,6 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	comffC "github.com/comfforts/comff-constants"
 	offclient "github.com/comfforts/comff-offers-client"
@@ -14,6 +16,12 @@ import (
 )
 
 const TEST_DIR = "data"
+const TEST_REQSTR = "test-offer-client@gmail.com"
+const TEST_SHOP_ID = "test-offer-client-shop"
+const TEST_COURIER_ID = "test-offer-client-courier"
+const TEST_DELIVERY_ID = "CL1eCr341e0r620ff3r"
+const TEST_WKFL_ID = "offer-client-test-wkflid"
+const TEST_RUN_ID = "offer-client-test-wkflrunid"
 
 func TestOffersClient(t *testing.T) {
 	logger := logger.NewTestAppLogger(TEST_DIR)
@@ -22,8 +30,10 @@ func TestOffersClient(t *testing.T) {
 		t *testing.T,
 		ofc offclient.Client,
 	){
-		"test database setup check, succeeds": testDatabaseSetup,
-		"test offer CRUD, succeeds":           testOfferCRUD,
+		"test database setup check, succeeds":    testDatabaseSetup,
+		"test offer CRUD, succeeds":              testOfferCRUD,
+		"duplicate offer test, succeeds":         testDuplicateOffer,
+		"invalid offer creation check, succeeds": testInvalidOfferCreate,
 	} {
 		t.Run(scenario, func(t *testing.T) {
 			ofc, teardown := setup(t, logger)
@@ -71,17 +81,15 @@ func testDatabaseSetup(t *testing.T, ofc offclient.Client) {
 func testOfferCRUD(t *testing.T, ofc offclient.Client) {
 	t.Helper()
 
-	reqtr, shopId, courierId, deliveryId := "test-client-offer-crud@gmail.com", "test-client-offer-crud-shop", "test-client-offer-crud-courier", "CL1eCr341e0r620ff3r"
-	wkflId, runId := "wkflid", "wkflrunid"
 	or := createOfferTester(t, ofc, &api.CreateOfferRequest{
-		ActorId:       shopId,
-		ParticipantId: courierId,
-		TransactionId: deliveryId,
-		RequestedBy:   reqtr,
+		ActorId:       TEST_SHOP_ID,
+		ParticipantId: TEST_COURIER_ID,
+		TransactionId: TEST_DELIVERY_ID,
+		RequestedBy:   TEST_REQSTR,
 		Min:           comffC.F12,
 		Max:           comffC.F15,
-		WorkflowId:    wkflId,
-		RunId:         runId,
+		WorkflowId:    TEST_WKFL_ID,
+		RunId:         TEST_RUN_ID,
 	})
 	or = getOfferTester(t, ofc, &api.GetOfferRequest{
 		Id: or.Offer.Id,
@@ -93,10 +101,74 @@ func testOfferCRUD(t *testing.T, ofc offclient.Client) {
 	resp, err := ofc.UpdateOffer(ctx, &api.UpdateOfferRequest{
 		Id:          or.Offer.Id,
 		Status:      api.OfferStatus_EXPIRED,
-		RequestedBy: reqtr,
+		RequestedBy: TEST_REQSTR,
 	})
 	require.NoError(t, err)
 	assert.Equal(t, resp.Offer.Status, api.OfferStatus_EXPIRED, "offer status should be EXPIRED")
+
+	deleteOfferTester(t, ofc, &api.DeleteOfferRequest{
+		Id: or.Offer.Id,
+	})
+}
+
+func testInvalidOfferCreate(t *testing.T, ofc offclient.Client) {
+	t.Helper()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	_, err := ofc.CreateOffer(ctx, &api.CreateOfferRequest{
+		ActorId:       TEST_SHOP_ID,
+		ParticipantId: TEST_COURIER_ID,
+		TransactionId: TEST_DELIVERY_ID,
+		RequestedBy:   "",
+		Min:           comffC.F12,
+		Max:           comffC.F15,
+		WorkflowId:    TEST_WKFL_ID,
+		RunId:         TEST_RUN_ID,
+	})
+	require.Error(t, err)
+
+	e, ok := status.FromError(err)
+	require.Equal(t, ok, true)
+	require.Equal(t, e.Code(), codes.InvalidArgument)
+}
+
+func testDuplicateOffer(t *testing.T, ofc offclient.Client) {
+	t.Helper()
+
+	or := createOfferTester(t, ofc, &api.CreateOfferRequest{
+		ActorId:       TEST_SHOP_ID,
+		ParticipantId: TEST_COURIER_ID,
+		TransactionId: TEST_DELIVERY_ID,
+		RequestedBy:   TEST_REQSTR,
+		Min:           comffC.F12,
+		Max:           comffC.F15,
+		WorkflowId:    TEST_WKFL_ID,
+		RunId:         TEST_RUN_ID,
+	})
+	or = getOfferTester(t, ofc, &api.GetOfferRequest{
+		Id: or.Offer.Id,
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	_, err := ofc.CreateOffer(ctx, &api.CreateOfferRequest{
+		ActorId:       TEST_SHOP_ID,
+		ParticipantId: TEST_COURIER_ID,
+		TransactionId: TEST_DELIVERY_ID,
+		RequestedBy:   TEST_REQSTR,
+		Min:           comffC.F12,
+		Max:           comffC.F15,
+		WorkflowId:    TEST_WKFL_ID,
+		RunId:         TEST_RUN_ID,
+	})
+	require.Error(t, err)
+
+	e, ok := status.FromError(err)
+	require.Equal(t, ok, true)
+	require.Equal(t, e.Code(), codes.AlreadyExists)
 
 	deleteOfferTester(t, ofc, &api.DeleteOfferRequest{
 		Id: or.Offer.Id,
