@@ -3,6 +3,7 @@ package client_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -81,6 +82,7 @@ func testDatabaseSetup(t *testing.T, ofc offclient.Client) {
 func testOfferCRUD(t *testing.T, ofc offclient.Client) {
 	t.Helper()
 
+	dur := (12 * time.Minute).Nanoseconds()
 	or := createOfferTester(t, ofc, &api.CreateOfferRequest{
 		ActorId:       TEST_SHOP_ID,
 		ParticipantId: TEST_COURIER_ID,
@@ -88,9 +90,14 @@ func testOfferCRUD(t *testing.T, ofc offclient.Client) {
 		RequestedBy:   TEST_REQSTR,
 		Min:           comffC.F12,
 		Max:           comffC.F15,
+		Duration:      dur,
+		Distance:      comffC.F10,
 		WorkflowId:    TEST_WKFL_ID,
 		RunId:         TEST_RUN_ID,
 	})
+	require.Equal(t, float32(comffC.F10), or.Offer.Distance)
+	require.Equal(t, dur, or.Offer.Duration)
+
 	or = getOfferTester(t, ofc, &api.GetOfferRequest{
 		Id: or.Offer.Id,
 	})
@@ -98,7 +105,28 @@ func testOfferCRUD(t *testing.T, ofc offclient.Client) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	scheduleId := "t3s1Sch3d41e"
 	resp, err := ofc.UpdateOffer(ctx, &api.UpdateOfferRequest{
+		Id:          or.Offer.Id,
+		Status:      api.OfferStatus_ACCEPT_PARTICIPANT,
+		ScheduleId:  scheduleId,
+		Value:       or.Offer.Max,
+		Min:         or.Offer.Min,
+		Max:         or.Offer.Max,
+		RequestedBy: TEST_REQSTR,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, resp.Offer.Status, api.OfferStatus_ACCEPT_PARTICIPANT, "offer status should be ACCEPT_PARTICIPANT")
+	assert.Equal(t, resp.Offer.ScheduleId, scheduleId, "offer schedule should match input schedule id")
+
+	sResp, err := ofc.GetScheduleOffers(ctx, &api.GetOffersRequest{
+		ScheduleId: scheduleId,
+	})
+	require.NoError(t, err)
+	require.Equal(t, 1, len(sResp.Offers))
+	require.Equal(t, scheduleId, sResp.Offers[0].ScheduleId)
+
+	resp, err = ofc.UpdateOffer(ctx, &api.UpdateOfferRequest{
 		Id:          or.Offer.Id,
 		Status:      api.OfferStatus_EXPIRED,
 		RequestedBy: TEST_REQSTR,
@@ -124,6 +152,8 @@ func testInvalidOfferCreate(t *testing.T, ofc offclient.Client) {
 		RequestedBy:   "",
 		Min:           comffC.F12,
 		Max:           comffC.F15,
+		Duration:      (12 * time.Minute).Nanoseconds(),
+		Distance:      comffC.F10,
 		WorkflowId:    TEST_WKFL_ID,
 		RunId:         TEST_RUN_ID,
 	})
@@ -144,6 +174,8 @@ func testDuplicateOffer(t *testing.T, ofc offclient.Client) {
 		RequestedBy:   TEST_REQSTR,
 		Min:           comffC.F12,
 		Max:           comffC.F15,
+		Duration:      (12 * time.Minute).Nanoseconds(),
+		Distance:      comffC.F10,
 		WorkflowId:    TEST_WKFL_ID,
 		RunId:         TEST_RUN_ID,
 	})
@@ -161,6 +193,8 @@ func testDuplicateOffer(t *testing.T, ofc offclient.Client) {
 		RequestedBy:   TEST_REQSTR,
 		Min:           comffC.F12,
 		Max:           comffC.F15,
+		Duration:      (12 * time.Minute).Nanoseconds(),
+		Distance:      comffC.F10,
 		WorkflowId:    TEST_WKFL_ID,
 		RunId:         TEST_RUN_ID,
 	})

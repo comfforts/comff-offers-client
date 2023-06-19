@@ -44,6 +44,7 @@ type Client interface {
 	GetOffers(ctx context.Context, req *api.GetOffersRequest, opts ...grpc.CallOption) (*api.OffersResponse, error)
 	GetActorOffers(ctx context.Context, req *api.GetOffersRequest, opts ...grpc.CallOption) (*api.OffersResponse, error)
 	GetParticipantOffers(ctx context.Context, req *api.GetOffersRequest, opts ...grpc.CallOption) (*api.OffersResponse, error)
+	GetScheduleOffers(ctx context.Context, req *api.GetOffersRequest, opts ...grpc.CallOption) (*api.OffersResponse, error)
 	DeleteOffer(ctx context.Context, req *api.DeleteOfferRequest, opts ...grpc.CallOption) (*api.DeleteResponse, error)
 	Close() error
 }
@@ -205,6 +206,17 @@ func (ofc *offersClient) GetParticipantOffers(
 	defer cancel()
 
 	return ofc.client.GetParticipantOffers(ctx, req)
+}
+
+func (ofc *offersClient) GetScheduleOffers(
+	ctx context.Context,
+	req *api.GetOffersRequest,
+	opts ...grpc.CallOption,
+) (*api.OffersResponse, error) {
+	ctx, cancel := ofc.contextWithOptions(ctx, ofc.opts)
+	defer cancel()
+
+	return ofc.client.GetScheduleOffers(ctx, req)
 }
 
 func (ofc *offersClient) DeleteOffer(
